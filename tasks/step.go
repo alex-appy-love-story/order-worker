@@ -63,27 +63,35 @@ func Perform(p StepPayload, ctx TaskContext) (err error) {
 }
 
 func Revert(p StepPayload, ctx TaskContext) error {
+
 	log.Printf("Revert: deleting order ID: %d\n", p.OrderID)
 
-	// Create client.
-	client := &http.Client{}
-	requestURL := fmt.Sprintf("http://%s/%d", ctx.OrderSvcAddr, p.OrderID)
-
-	// Set up request.
-	req, err := http.NewRequest("DELETE", requestURL, nil)
+	err := SetOrderStatus(ctx.OrderSvcAddr, p.OrderID, order.FAIL)
 	if err != nil {
-		fmt.Printf("error making http request: %s\n", err)
-		return err
+		return fmt.Errorf("failed to set status")
 	}
 
-	// Fetch Request.
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	defer resp.Body.Close()
+	{
+		// Create client.
+		client := &http.Client{}
+		requestURL := fmt.Sprintf("http://%s/%d", ctx.OrderSvcAddr, p.OrderID)
 
-	// All ok.
+		// Set up request.
+		req, err := http.NewRequest("DELETE", requestURL, nil)
+		if err != nil {
+			fmt.Printf("error making http request: %s\n", err)
+			return err
+		}
+
+		// Fetch Request.
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		defer resp.Body.Close()
+
+		// All ok.
+	}
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/hibiken/asynq"
 )
@@ -65,6 +66,8 @@ func HandleRevertStepTask(ctx context.Context, t *asynq.Task) error {
 	}
 
 	taskContext := GetTaskContext(ctx)
+
+	log.Printf("WHAT: %+v\n", taskContext)
 
 	// Error channel. This can either catch context cancellation or if an error occured within the task.
 	c := make(chan error, 1)
