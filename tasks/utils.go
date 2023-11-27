@@ -83,14 +83,18 @@ func GetTaskState(doIn time.Duration, taskID string, ctx TaskContext) (TaskState
 
 	time.Sleep(doIn)
 
-	taskInfo, err := ctx.AsynqInspector.GetTaskInfo(ctx.ServerQueue, taskID)
+	taskInfo, err := ctx.AsynqInspector.GetTaskInfo(ctx.NextQueue, taskID)
+
+	fmt.Println("Error:", err)
 
 	if err != nil {
 		if err.Error() == TASK_NOT_FOUND {
 			// Task no longer inside the current server queue. (It was taken)
+			fmt.Println("Task taken!")
 			return Done, nil
 		} else {
 			// Some error occured inside the task.
+			fmt.Println("Task Failed!")
 			ctx.CircuitBreaker.IncrementFails()
 			return Failed, fmt.Errorf(taskInfo.LastErr)
 		}
@@ -112,14 +116,18 @@ func GetTaskState(doIn time.Duration, taskID string, ctx TaskContext) (TaskState
 func PerformNext(stepPayload StepPayload, payload map[string]interface{}, ctx TaskContext) error {
 	p, err := json.Marshal(payload)
 	if err != nil {
+		fmt.Println("Failed to marshal")
+		Revert(stepPayload, ctx)
 		return err
 	}
 
-	task := asynq.NewTask("task:perform", p)
+	task := asynq.NewTask("task:perform", p, asynq.MaxRetry(0))
 
 	// Process the task immediately.
-	taskInfo, err := ctx.AsynqClient.Enqueue(task, asynq.Queue(ctx.NextQueue))
+	taskInfo, err := ctx.AsynqClient.Enqueue(task, asynq.Queue(ctx.NextQueue), asynq.MaxRetry(0))
 	if err != nil {
+		fmt.Println("Failed to enqueue task to next")
+		Revert(stepPayload, ctx)
 		return err
 	}
 
@@ -139,16 +147,20 @@ func PerformNext(stepPayload StepPayload, payload map[string]interface{}, ctx Ta
 }
 
 func RevertPrevious(stepPayload StepPayload, payload map[string]interface{}, ctx TaskContext) error {
+	if len(ctx.PreviousQueue) == 0 {
+		return nil
+	}
+
 	p, err := json.Marshal(payload)
 
 	if err != nil {
 		return err
 	}
 
-	task := asynq.NewTask("task:revert", p)
+	task := asynq.NewTask("task:revert", p, asynq.MaxRetry(0))
 
 	// Process the task immediately.
-	_, err = ctx.AsynqClient.Enqueue(task, asynq.Queue(ctx.PreviousQueue), asynq.MaxRetry(5))
+	_, err = ctx.AsynqClient.Enqueue(task, asynq.Queue(ctx.PreviousQueue), asynq.MaxRetry(0))
 	if err != nil {
 
 		// Failed to queue.

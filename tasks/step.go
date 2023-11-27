@@ -42,19 +42,22 @@ func Perform(p StepPayload, ctx TaskContext) (err error) {
 	}
 	ord := &order.Order{}
 	err = json.NewDecoder(res.Body).Decode(&ord)
+
 	p.OrderID = ord.ID
-	defer func() {
-		if err != nil {
-			Revert(p, ctx)
-		}
-	}()
 
 	fmt.Printf("client: got response!\n")
 	fmt.Printf("client: status code: %d\n", res.StatusCode)
 
+	nextPayload := map[string]interface{}{
+		"token_id": ord.TokenID,
+		"user_id":  ord.UserID,
+		"amount":   ord.Amount,
+		"order_id": ord.ID,
+	}
+
 	log.Printf("%+v\n", ord)
 
-	return nil
+	return PerformNext(p, nextPayload, ctx)
 }
 
 func Revert(p StepPayload, ctx TaskContext) error {
