@@ -20,7 +20,8 @@ type StepPayload struct {
 	// Define members here...
 	order.OrderInfo
 
-	OrderID uint `json:"order_id,omitempty" `
+	OrderID  uint   `json:"order_id,omitempty" `
+	Username string `json:"username"`
 }
 
 func Perform(p StepPayload, ctx TaskContext) (err error) {
@@ -51,6 +52,7 @@ func Perform(p StepPayload, ctx TaskContext) (err error) {
 	nextPayload := map[string]interface{}{
 		"token_id": ord.TokenID,
 		"user_id":  ord.UserID,
+		"username": p.Username,
 		"amount":   ord.Amount,
 		"order_id": ord.ID,
 	}
