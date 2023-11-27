@@ -85,16 +85,12 @@ func GetTaskState(doIn time.Duration, taskID string, ctx TaskContext) (TaskState
 
 	taskInfo, err := ctx.AsynqInspector.GetTaskInfo(ctx.NextQueue, taskID)
 
-	fmt.Println("Error:", err)
-
 	if err != nil {
 		if err.Error() == TASK_NOT_FOUND {
 			// Task no longer inside the current server queue. (It was taken)
-			fmt.Println("Task taken!")
 			return Done, nil
 		} else {
 			// Some error occured inside the task.
-			fmt.Println("Task Failed!")
 			ctx.CircuitBreaker.IncrementFails()
 			return Failed, fmt.Errorf(taskInfo.LastErr)
 		}
@@ -103,10 +99,15 @@ func GetTaskState(doIn time.Duration, taskID string, ctx TaskContext) (TaskState
 		if taskInfo.State.String() == "active" {
 			fmt.Println("Job is being processed.")
 			return Done, nil
+		} else if taskInfo.State.String() == "archived" {
+			fmt.Println("Task failed!")
+			ctx.CircuitBreaker.IncrementFails()
+			ctx.AsynqInspector.DeleteTask(ctx.NextQueue, taskID)
+			return Failed, fmt.Errorf(taskInfo.LastErr)
 		} else {
 			fmt.Println("Job is still in the queue. Cancel!")
 			ctx.CircuitBreaker.IncrementFails()
-			ctx.AsynqInspector.DeleteTask(ctx.ServerQueue, taskID)
+			ctx.AsynqInspector.DeleteTask(ctx.NextQueue, taskID)
 		}
 		// Job is still pending. We got timeout.
 		return Expired, fmt.Errorf("Task: Expired")
