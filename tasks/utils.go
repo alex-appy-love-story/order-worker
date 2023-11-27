@@ -32,6 +32,7 @@ type TaskContext struct {
 	ServerQueue    string
 	PreviousQueue  string
 	CircuitBreaker *circuitbreaker.CB
+	OrderSvcAddr   string
 }
 
 func GetTaskContext(ctx context.Context) (taskCtx TaskContext) {
@@ -67,6 +68,14 @@ func GetTaskContext(ctx context.Context) (taskCtx TaskContext) {
 		taskCtx.CircuitBreaker = val.(*circuitbreaker.CB)
 	}
 
+	if val := ctx.Value("circuit_breaker"); val != nil {
+		taskCtx.CircuitBreaker = val.(*circuitbreaker.CB)
+	}
+
+	if val := ctx.Value("order_svc_addr"); val != nil {
+		taskCtx.OrderSvcAddr = val.(string)
+	}
+
 	return
 }
 
@@ -89,7 +98,7 @@ func GetTaskState(doIn time.Duration, taskID string, ctx TaskContext) (TaskState
 	} else {
 		if taskInfo.State.String() == "active" {
 			fmt.Println("Job is being processed.")
-            return Done, nil
+			return Done, nil
 		} else {
 			fmt.Println("Job is still in the queue. Cancel!")
 			ctx.CircuitBreaker.IncrementFails()

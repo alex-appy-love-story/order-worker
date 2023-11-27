@@ -79,6 +79,7 @@ func (a *App) Start(ctx context.Context) error {
 				baseContext = context.WithValue(baseContext, "asynq_inspector", a.AsynqInspector)
 				baseContext = context.WithValue(baseContext, "previous_queue", a.Config.QueueConfig.Previous)
 				baseContext = context.WithValue(baseContext, "circuit_breaker", a.CircuitBreaker)
+				baseContext = context.WithValue(baseContext, "order_svc_addr", a.Config.OrderSvcAddr)
 				return baseContext
 			},
 		},
