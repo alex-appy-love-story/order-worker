@@ -2,7 +2,10 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
+	"os/signal"
 
 	"github.com/alex-appy-love-story/worker-template/circuitbreaker"
 	"github.com/alex-appy-love-story/worker-template/tasks"
@@ -62,6 +65,21 @@ func (a *App) connectDB(ctx context.Context) error {
 }
 
 func (a *App) Start(ctx context.Context) error {
+	// Handle SIGINT (CTRL+C) gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	// Set up OpenTelemetry.
+	serviceName := a.Config.QueueConfig.Server
+	serviceVersion := "0.1.0"
+	otelShutdown, err := SetupOTelSDK(ctx, serviceName, serviceVersion)
+	if err != nil {
+		return err
+	}
+	// Handle shutdown properly so nothing leaks.
+	defer func() {
+		err = errors.Join(err, otelShutdown(ctx))
+	}()
 
 	server := asynq.NewServer(
 		asynq.RedisClientOpt{Addr: a.Config.RedisAddress},
@@ -126,6 +144,7 @@ func (a *App) Start(ctx context.Context) error {
 	case err := <-ch:
 		return err
 	case <-ctx.Done():
+		stop()
 		server.Shutdown()
 		return nil
 	}

@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/hibiken/asynq"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 )
 
 //----------------------------------------------
@@ -21,6 +24,10 @@ const (
 type SagaPayload struct {
 	Action string // "perform" or "revert"
 }
+
+var (
+	tracer = otel.Tracer(os.Getenv("SERVER_QUEUE"))
+)
 
 //---------------------------------------------------------------
 // Write a function HandleXXXTask to handle the input task.
@@ -46,17 +53,29 @@ func HandlePerformStepTask(ctx context.Context, t *asynq.Task) error {
 	// Error channel. This can either catch context cancellation or if an error occured within the task.
 	c := make(chan error, 1)
 
+	_, taskContext.Span = tracer.Start(ctx, fmt.Sprintf("%s.perform", taskContext.ServerQueue))
+	defer taskContext.Span.End()
+
 	go func() {
 		c <- Perform(p, taskContext)
 	}()
 
+	var err error
 	select {
 	case <-ctx.Done():
 		// cancelation signal received, abandon this work.
-		return ctx.Err()
+		err = ctx.Err()
 	case res := <-c:
-		return res
+		err = res
 	}
+
+	if err != nil {
+		taskContext.TaskFailed(err)
+	} else {
+		taskContext.Span.SetStatus(codes.Ok, "")
+	}
+
+	return err
 }
 
 func HandleRevertStepTask(ctx context.Context, t *asynq.Task) error {
@@ -72,15 +91,29 @@ func HandleRevertStepTask(ctx context.Context, t *asynq.Task) error {
 	// Error channel. This can either catch context cancellation or if an error occured within the task.
 	c := make(chan error, 1)
 
+	_, taskContext.Span = tracer.Start(ctx, fmt.Sprintf("%s.revert", taskContext.ServerQueue))
+	defer taskContext.Span.End()
+
 	go func() {
 		c <- Revert(p, taskContext)
 	}()
 
+	var err error
 	select {
 	case <-ctx.Done():
 		// cancelation signal received, abandon this work.
-		return ctx.Err()
+		err = ctx.Err()
 	case res := <-c:
-		return res
+		err = res
 	}
+
+	taskContext.AddSpanStateEvent()
+
+	if err != nil {
+		taskContext.TaskFailed(err)
+	} else {
+		taskContext.Span.SetStatus(codes.Ok, "")
+	}
+
+	return err
 }
