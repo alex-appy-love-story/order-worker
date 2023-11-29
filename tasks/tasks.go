@@ -134,9 +134,6 @@ func HandleRevertStepTask(ctx context.Context, t *asynq.Task) error {
 	// Error channel. This can either catch context cancellation or if an error occured within the task.
 	c := make(chan error, 1)
 
-	_, taskContext.Span = tracer.Start(ctx, fmt.Sprintf("%s.revert", taskContext.ServerQueue))
-	defer taskContext.Span.End()
-
 	go func() {
 		c <- Revert(p, taskContext)
 	}()
