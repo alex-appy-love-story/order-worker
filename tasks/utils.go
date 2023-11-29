@@ -44,7 +44,7 @@ type TaskContext struct {
 }
 
 func (t TaskContext) TaskFailed(err error) {
-	t.Span.AddEvent(err.Error())
+	t.Span.RecordError(err)
 	t.Span.SetStatus(codes.Error, err.Error())
 }
 
@@ -147,6 +147,8 @@ func GetTaskState(doIn time.Duration, taskID string, ctx *TaskContext) (TaskStat
 }
 
 func PerformNext(stepPayload StepPayload, payload map[string]interface{}, ctx *TaskContext) error {
+	payload["trace_carrier"] = stepPayload.TraceCarrier
+
 	p, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Println("Failed to marshal")
@@ -181,6 +183,7 @@ func PerformNext(stepPayload StepPayload, payload map[string]interface{}, ctx *T
 }
 
 func RevertSelf(stepPayload StepPayload, ctx *TaskContext) error {
+	log.Printf("Calling revert self with payload: %+v\n", stepPayload)
 	p, err := json.Marshal(stepPayload)
 
 	if err != nil {
@@ -205,6 +208,7 @@ func RevertPrevious(stepPayload StepPayload, payload map[string]interface{}, ctx
 		return nil
 	}
 
+	payload["trace_carrier"] = stepPayload.TraceCarrier
 	p, err := json.Marshal(payload)
 
 	if err != nil {

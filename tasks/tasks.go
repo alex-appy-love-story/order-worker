@@ -10,7 +10,14 @@ import (
 	"github.com/hibiken/asynq"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 )
+
+// SpanContext contains identifying trace information about a Span.
+type SpanContext struct {
+	TraceID string `json:"trace_id"`
+	SpanID  string `json:"span_id"`
+}
 
 //----------------------------------------------
 // Task payload.
@@ -23,6 +30,9 @@ const (
 
 type SagaPayload struct {
 	Action string // "perform" or "revert"
+
+	// For Otel
+	TraceCarrier propagation.MapCarrier `json:"trace_carrier,omitempty"`
 }
 
 var (
@@ -37,6 +47,34 @@ var (
 // that satisfies asynq.Handler interface.
 //---------------------------------------------------------------
 
+func fetchSpan(p *StepPayload, ctx context.Context, taskCtx *TaskContext, job string) {
+
+	// Create the propagator.
+	propagator := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
+
+	// Try to fetch the span context.
+	if len(p.TraceCarrier) > 0 {
+		log.Println("Found parent trace!")
+
+		parentCtx := propagator.Extract(context.Background(), p.TraceCarrier)
+		_, taskCtx.Span = tracer.Start(parentCtx, fmt.Sprintf("%s.%s", taskCtx.ServerQueue, job))
+
+	} else {
+		log.Println("Creating a new trace!")
+
+		// Create a new trace.
+		ctx, taskCtx.Span = tracer.Start(ctx, fmt.Sprintf("%s.%s", taskCtx.ServerQueue, job))
+
+		p.TraceCarrier = make(propagation.MapCarrier)
+
+		// Serialize the context into carrier
+		propagator.Inject(ctx, p.TraceCarrier)
+
+		// This carrier is sent accros the process
+		fmt.Println("Carrier:", p.TraceCarrier)
+	}
+}
+
 func HandlePerformStepTask(ctx context.Context, t *asynq.Task) error {
 	taskContext := GetTaskContext(ctx)
 
@@ -49,12 +87,15 @@ func HandlePerformStepTask(ctx context.Context, t *asynq.Task) error {
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
 		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
 	}
+	log.Printf("Payload: %+v\n", p)
+
+	fetchSpan(&p, ctx, taskContext, "perform")
+	defer taskContext.Span.End()
 
 	// Error channel. This can either catch context cancellation or if an error occured within the task.
 	c := make(chan error, 1)
 
-	_, taskContext.Span = tracer.Start(ctx, fmt.Sprintf("%s.perform", taskContext.ServerQueue))
-	defer taskContext.Span.End()
+	// ctx = context.WithValue(ctx)
 
 	go func() {
 		c <- Perform(p, taskContext)
@@ -79,14 +120,16 @@ func HandlePerformStepTask(ctx context.Context, t *asynq.Task) error {
 }
 
 func HandleRevertStepTask(ctx context.Context, t *asynq.Task) error {
+	taskContext := GetTaskContext(ctx)
+
 	var p StepPayload
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
 		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
 	}
+	log.Printf("Payload: %+v\n", p)
 
-	taskContext := GetTaskContext(ctx)
-
-	log.Printf("WHAT: %+v\n", taskContext)
+	fetchSpan(&p, ctx, taskContext, "revert")
+	defer taskContext.Span.End()
 
 	// Error channel. This can either catch context cancellation or if an error occured within the task.
 	c := make(chan error, 1)

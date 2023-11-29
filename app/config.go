@@ -19,6 +19,12 @@ type Config struct {
 	DatabaseConfig DatabaseConfig
 	WorkerCount    int
 	OrderSvcAddr   string
+	OtelConfig     OtelConfig
+}
+
+type OtelConfig struct {
+	ExporterEndpoint string
+	Insecure         string
 }
 
 type QueueConfig struct {
@@ -43,6 +49,10 @@ func LoadConfig() (*Config, error) {
 		},
 		OrderSvcAddr: "localhost:5001",
 		WorkerCount:  5,
+		OtelConfig: OtelConfig{
+			ExporterEndpoint: "localhost:4317",
+			Insecure:         "true",
+		},
 	}
 
 	if redisAddr, exists := os.LookupEnv("REDIS_ADDR"); exists {
@@ -67,6 +77,10 @@ func LoadConfig() (*Config, error) {
 
 	if dbName, exists := os.LookupEnv("DB_NAME"); exists {
 		cfg.DatabaseConfig.DatabaseName = dbName
+	}
+
+	if otelExporter, exists := os.LookupEnv("OTEL_EXPORTER_OTLP_ENDPOINT"); exists {
+		cfg.OtelConfig.ExporterEndpoint = otelExporter
 	}
 
 	if workerCount, exists := os.LookupEnv("WORKER_COUNT"); exists {

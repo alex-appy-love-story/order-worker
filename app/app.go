@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 
@@ -70,10 +71,9 @@ func (a *App) Start(ctx context.Context) error {
 	defer stop()
 
 	// Set up OpenTelemetry.
-	serviceName := a.Config.QueueConfig.Server
-	serviceVersion := "0.1.0"
-	otelShutdown, err := SetupOTelSDK(ctx, serviceName, serviceVersion)
+	otelShutdown, err := SetupOTelSDK(ctx, a.Config)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	// Handle shutdown properly so nothing leaks.
