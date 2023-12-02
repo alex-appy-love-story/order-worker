@@ -55,6 +55,7 @@ func (a *App) connectDB(ctx context.Context) error {
 		a.Config.DatabaseConfig.DatabaseName,
 	)
 
+    fmt.Println(dsn)
 	gorm, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 	if err != nil {
