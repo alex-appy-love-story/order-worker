@@ -25,16 +25,13 @@ type StepPayload struct {
 }
 
 func Perform(p StepPayload, taskCtx *TaskContext) (err error) {
+
 	taskCtx.Span.SetAttributes(
 		attribute.String("username", p.Username),
 		attribute.Int("token_id", int(p.TokenID)),
 		attribute.Int("amount", int(p.Amount)),
 	)
 	taskCtx.Span.AddEvent("Creating order")
-
-	if p.Action == "err" {
-		return fmt.Errorf("Test error")
-	}
 
 	payloadBuf := new(bytes.Buffer)
 	if err := json.NewEncoder(payloadBuf).Encode(&p); err != nil {
