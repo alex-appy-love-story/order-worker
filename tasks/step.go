@@ -64,6 +64,18 @@ func Perform(p StepPayload, taskCtx *TaskContext) (err error) {
 	taskCtx.Span.AddEvent("Order created", trace.WithAttributes(attribute.Int("order_id", int(p.OrderID))))
 	taskCtx.Span.SetAttributes(attribute.Int("order_id", int(p.OrderID)))
 
+	// NOTE(Appy): We can only force fail after creating the order since we
+	//             need the order ID.
+	if p.FailTrigger == taskCtx.ServerQueue {
+		err = fmt.Errorf("Forced to fail")
+		taskCtx.TaskFailed(err)
+		err := SetOrderStatus(taskCtx.OrderSvcAddr, ord.ID, order.FORCED_FAIL)
+		if err != nil {
+			return fmt.Errorf("Failed to set order status")
+		}
+		return err
+	}
+
 	return PerformNext(p, nextPayload, taskCtx)
 }
 

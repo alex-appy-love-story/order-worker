@@ -93,11 +93,6 @@ func HandlePerformStepTask(ctx context.Context, t *asynq.Task) error {
 	defer taskContext.Span.End()
 
 	var err error
-	if p.FailTrigger == taskContext.ServerQueue {
-		err = fmt.Errorf("Forced to fail")
-		taskContext.TaskFailed(err)
-		return err
-	}
 
 	// Error channel. This can either catch context cancellation or if an error occured within the task.
 	c := make(chan error, 1)
