@@ -81,35 +81,38 @@ func Perform(p StepPayload, taskCtx *TaskContext) (err error) {
 
 func Revert(p StepPayload, taskCtx *TaskContext) error {
 	taskCtx.Span.AddEvent("Reverting order")
-	taskCtx.Span.SetAttributes(attribute.Int("order_id", int(p.OrderID)))
 
-	err := SetOrderStatus(taskCtx.OrderSvcAddr, p.OrderID, order.FAIL)
-	if err != nil {
-		return fmt.Errorf("failed to set status")
-	}
+	// NOTE(Appy): We don't want to delete the actual record (for testing purposes!)
 
-	// Create client.
-	client := &http.Client{}
-	requestURL := fmt.Sprintf("http://%s/%d", taskCtx.OrderSvcAddr, p.OrderID)
+	// taskCtx.Span.SetAttributes(attribute.Int("order_id", int(p.OrderID)))
 
-	taskCtx.Span.AddEvent("Creating a delete request")
-	// Set up request.
-	req, err := http.NewRequest("DELETE", requestURL, nil)
-	if err != nil {
-		return fmt.Errorf("Failed to create order deletion request")
-	}
+	// err := SetOrderStatus(taskCtx.OrderSvcAddr, p.OrderID, order.FAIL)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to set status")
+	// }
 
-	taskCtx.Span.AddEvent("Performing a delete request")
-	// Fetch Request.
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("Failed to perform order deletion request")
-	}
-	defer resp.Body.Close()
+	// // Create client.
+	// client := &http.Client{}
+	// requestURL := fmt.Sprintf("http://%s/%d", taskCtx.OrderSvcAddr, p.OrderID)
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Failed to delete order ID %d", p.OrderID)
-	}
+	// taskCtx.Span.AddEvent("Creating a delete request")
+	// // Set up request.
+	// req, err := http.NewRequest("DELETE", requestURL, nil)
+	// if err != nil {
+	// 	return fmt.Errorf("Failed to create order deletion request")
+	// }
+
+	// taskCtx.Span.AddEvent("Performing a delete request")
+	// // Fetch Request.
+	// resp, err := client.Do(req)
+	// if err != nil {
+	// 	return fmt.Errorf("Failed to perform order deletion request")
+	// }
+	// defer resp.Body.Close()
+
+	// if resp.StatusCode != http.StatusOK {
+	// 	return fmt.Errorf("Failed to delete order ID %d", p.OrderID)
+	// }
 
 	taskCtx.Span.AddEvent("Successfully reverted order creation")
 	return nil
