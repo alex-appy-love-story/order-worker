@@ -40,13 +40,15 @@ func CircuitBreakerMiddleware(h asynq.Handler) asynq.Handler {
 		if err == nil {
 			cb.SetFails(0)
 			cb.SetState("closed")
+            fmt.Println("CB is closed")
 			return nil
 		}
 
 		if cb.IsState("half-open") {
 			cb.SetState("open")
 			cb.OpenChannel() <- struct{}{}
-			return err
+			fmt.Println("CB is open")
+            return err
 		}
 
 		cb.IncrementFails()
@@ -55,6 +57,8 @@ func CircuitBreakerMiddleware(h asynq.Handler) asynq.Handler {
 			cb.OpenChannel() <- struct{}{}
 		}
         
+        fmt.Println("Fails after:", cb.Fails())
+        fmt.Println("CB is", cb.State())
 		return err
 	})
 }
