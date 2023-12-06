@@ -85,7 +85,7 @@ func Perform(p StepPayload, taskCtx *TaskContext) (err error) {
 		if errOrder != nil {
 			return fmt.Errorf("Failed to set order status")
 		}
-        fmt.Println("Number of CB fails is: %d", taskCtx.CircuitBreaker.Fails())
+        fmt.Println("Number of CB fails is: ", taskCtx.CircuitBreaker.Fails())
         fmt.Println(err)
 		return err
 	}
