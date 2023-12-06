@@ -41,6 +41,7 @@ func CircuitBreakerMiddleware(h asynq.Handler) asynq.Handler {
 			cb.SetFails(0)
 			cb.SetState("closed")
             fmt.Println("CB is closed")
+            fmt.Println("Fails after:", cb.Fails())
 			return nil
 		}
 
@@ -48,6 +49,7 @@ func CircuitBreakerMiddleware(h asynq.Handler) asynq.Handler {
 			cb.SetState("open")
 			cb.OpenChannel() <- struct{}{}
 			fmt.Println("CB is open")
+            fmt.Println("Fails after:", cb.Fails())
             return err
 		}
 
@@ -57,8 +59,8 @@ func CircuitBreakerMiddleware(h asynq.Handler) asynq.Handler {
 			cb.OpenChannel() <- struct{}{}
 		}
         
-        fmt.Println("Fails after:", cb.Fails())
         fmt.Println("CB is", cb.State())
+        fmt.Println("Fails after:", cb.Fails())
 		return err
 	})
 }
