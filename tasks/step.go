@@ -67,11 +67,13 @@ func Perform(p StepPayload, taskCtx *TaskContext) (err error) {
     //NOTE(Alex): Same not as Appy but for default response 
 	// Immediately send back default response if CB is open
 	if taskCtx.CircuitBreaker.IsState("open") {
+		err = fmt.Errorf("Default response")
+		taskCtx.TaskFailed(err)
 		err := SetOrderStatus(taskCtx.OrderSvcAddr, ord.ID, order.DEFAULT_RESPONSE)
 		if err != nil {
 			return fmt.Errorf("Failed to set order status")
 		}
-		return fmt.Errorf("Default response.")
+		return err
 	}
 
 	// NOTE(Appy): We can only force fail after creating the order since we
@@ -83,6 +85,7 @@ func Perform(p StepPayload, taskCtx *TaskContext) (err error) {
 		if err != nil {
 			return fmt.Errorf("Failed to set order status")
 		}
+        fmt.Printf("Number of CB fails is: %d", taskCtx.CircuitBreaker.Fails())
 		return err
 	}
 
