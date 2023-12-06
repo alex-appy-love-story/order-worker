@@ -69,8 +69,8 @@ func Perform(p StepPayload, taskCtx *TaskContext) (err error) {
 	if taskCtx.CircuitBreaker.IsState("open") {
 		err = fmt.Errorf("Default response")
 		taskCtx.TaskFailed(err)
-		err := SetOrderStatus(taskCtx.OrderSvcAddr, ord.ID, order.DEFAULT_RESPONSE)
-		if err != nil {
+		errOrder := SetOrderStatus(taskCtx.OrderSvcAddr, ord.ID, order.DEFAULT_RESPONSE)
+		if errOrder != nil {
 			return fmt.Errorf("Failed to set order status")
 		}
 		return err
@@ -81,8 +81,8 @@ func Perform(p StepPayload, taskCtx *TaskContext) (err error) {
 	if p.FailTrigger == taskCtx.ServerQueue {
 		err = fmt.Errorf("Forced to fail")
 		taskCtx.TaskFailed(err)
-		err := SetOrderStatus(taskCtx.OrderSvcAddr, ord.ID, order.FORCED_FAIL)
-		if err != nil {
+		errOrder := SetOrderStatus(taskCtx.OrderSvcAddr, ord.ID, order.FORCED_FAIL)
+		if errOrder != nil {
 			return fmt.Errorf("Failed to set order status")
 		}
         fmt.Println("Number of CB fails is: %d", taskCtx.CircuitBreaker.Fails())
