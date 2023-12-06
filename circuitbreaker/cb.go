@@ -54,7 +54,7 @@ func NewCircuitBreaker(opts ...CBOptions) *CB {
 	}
 
 	if opt.MaxConsecutiveFails == nil {
-		opt.MaxConsecutiveFails = IntToPointer(uint64(5))
+		opt.MaxConsecutiveFails = IntToPointer(uint64(10))
 	}
 
 	if opt.OpenInterval == nil {

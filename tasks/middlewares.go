@@ -55,7 +55,6 @@ func CircuitBreakerMiddleware(h asynq.Handler) asynq.Handler {
 			cb.OpenChannel() <- struct{}{}
 		}
         
-        fmt.Println("The CB state is: ", cb.State())
 		return err
 	})
 }
