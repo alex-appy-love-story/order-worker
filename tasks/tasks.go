@@ -71,7 +71,7 @@ func fetchSpan(p *StepPayload, ctx context.Context, taskCtx *TaskContext, job st
 		propagator.Inject(ctx, p.TraceCarrier)
 
 		// This carrier is sent accros the process
-		fmt.Println("Carrier:", p.TraceCarrier)
+		//fmt.Println("Carrier:", p.TraceCarrier)
 	}
 }
 
