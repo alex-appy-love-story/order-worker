@@ -78,11 +78,6 @@ func fetchSpan(p *StepPayload, ctx context.Context, taskCtx *TaskContext, job st
 func HandlePerformStepTask(ctx context.Context, t *asynq.Task) error {
 	taskContext := GetTaskContext(ctx)
 
-	// Immediately send back default response if CB is open
-	if taskContext.CircuitBreaker.IsState("open") {
-		return fmt.Errorf("Default response.")
-	}
-
 	var p StepPayload
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
 		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)

@@ -64,6 +64,16 @@ func Perform(p StepPayload, taskCtx *TaskContext) (err error) {
 	taskCtx.Span.AddEvent("Order created", trace.WithAttributes(attribute.Int("order_id", int(p.OrderID))))
 	taskCtx.Span.SetAttributes(attribute.Int("order_id", int(p.OrderID)))
 
+    //NOTE(Alex): Same not as Appy but for default response 
+	// Immediately send back default response if CB is open
+	if taskCtx.CircuitBreaker.IsState("open") {
+		err := SetOrderStatus(taskCtx.OrderSvcAddr, ord.ID, order.DEFAULT_RESPONSE)
+		if err != nil {
+			return fmt.Errorf("Failed to set order status")
+		}
+		return fmt.Errorf("Default response.")
+	}
+
 	// NOTE(Appy): We can only force fail after creating the order since we
 	//             need the order ID.
 	if p.FailTrigger == taskCtx.ServerQueue {
