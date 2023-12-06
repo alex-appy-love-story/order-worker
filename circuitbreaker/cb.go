@@ -81,11 +81,13 @@ func (cb *CB) FailsExcceededThreshold() bool {
 
 func (cb *CB) OpenWatcher() {
 	for range cb.openChannel {
+        fmt.Println("OPEN WATCHER")
 		time.Sleep(cb.openInterval)
 		cb.mutex.Lock()
 		cb.state = halfOpen
 		cb.fails = 0
 		cb.mutex.Unlock()
+        fmt.Println("CLOSE WATCHER")
 	}
 }
 

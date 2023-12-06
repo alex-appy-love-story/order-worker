@@ -112,7 +112,7 @@ func HandlePerformStepTask(ctx context.Context, t *asynq.Task) error {
 		taskContext.Span.SetStatus(codes.Ok, "")
 	}
 
-    fmt.Println(err)
+    fmt.Println("Fails after: ", taskContext.CircuitBreaker.Fails())
 	return err
 }
 
